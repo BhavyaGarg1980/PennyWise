@@ -375,3 +375,74 @@ function MonthlyBarChart({ data }) {
     </article>
   );
 }
+
+function TransactionList({
+  transactions,
+  categories,
+  onDelete,
+  showAll = false,
+}) {
+  if (!transactions.length) {
+    return (
+      <div className="empty-state">
+        <span>✧</span>
+        <strong>No transactions found</strong>
+        <p>Try another search or add a transaction.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="transaction-list">
+      {transactions.map((item) => (
+        <article className="transaction-row" key={item.id}>
+          <div
+            className={`transaction-icon ${
+              item.type === "income" ? "income-bg" : "expense-bg"
+            }`}
+          >
+            {item.categoryIcon || categoryEmoji(item.category, categories)}
+          </div>
+
+          <div className="transaction-description">
+            <strong>{item.category}</strong>
+            <span>{formatDate(item.date)}</span>
+
+            {item.paymentMode && (
+              <small className="transaction-payment">
+                {item.paymentMode}
+              </small>
+            )}
+
+            {item.notes && (
+              <small className="transaction-payment">
+                {item.notes}
+              </small>
+            )}
+          </div>
+
+          <div className="transaction-right">
+            <strong
+              className={item.type === "income" ? "income-text" : ""}
+            >
+              {item.type === "income" ? "+" : "−"}
+              {money(item.amount)}
+            </strong>
+
+            {showAll && (
+              <button
+                type="button"
+                className="delete-button"
+                onClick={() => onDelete(item.id)}
+                aria-label={`Delete ${item.category} transaction`}
+                title="Delete transaction"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
