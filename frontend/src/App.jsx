@@ -205,3 +205,101 @@ function AreaChart({ data }) {
     </div>
   );
 }
+
+function CategoryDonutChart({ transactions, categories }) {
+  const colors = [
+    "#f36c9c",
+    "#9298ff",
+    "#bb87ee",
+    "#70d8a2",
+    "#ffb86b",
+    "#59c3e6",
+    "#f08b70",
+  ];
+
+  const categoryTotals = transactions
+    .filter((item) => item.type === "expense")
+    .reduce((result, item) => {
+      result[item.category] =
+        (result[item.category] || 0) + item.amount;
+      return result;
+    }, {});
+
+  const categoryList = Object.entries(categoryTotals)
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const total = categoryList.reduce(
+    (sum, item) => sum + item.amount,
+    0
+  );
+
+  let currentAngle = 0;
+
+  const gradient = categoryList.length
+    ? categoryList
+        .map((item, index) => {
+          const start = currentAngle;
+          currentAngle += total ? (item.amount / total) * 360 : 0;
+
+          return `${colors[index % colors.length]} ${start}deg ${currentAngle}deg`;
+        })
+        .join(", ")
+    : "#353443 0deg 360deg";
+
+  return (
+    <article className="panel category-chart-panel">
+      <div className="panel-header">
+        <div>
+          <h3>Where your money goes</h3>
+          <p>Expense breakdown by category</p>
+        </div>
+        <span className="chart-period-label">YOUR DATA</span>
+      </div>
+
+      {!total ? (
+        <div className="chart-empty">
+          <span>✧</span>
+          <p>Add an expense to see your spending breakdown.</p>
+        </div>
+      ) : (
+        <>
+          <div className="category-donut-layout">
+            <div
+              className="category-donut"
+              style={{ "--category-gradient": gradient }}
+            >
+              <div className="category-donut-center">
+                <span>Total expenses</span>
+                <strong>{money(total)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="category-legend">
+            {categoryList.map((item, index) => (
+              <div className="category-legend-item" key={item.name}>
+                <span
+                  className="category-color-dot"
+                  style={{
+                    backgroundColor: colors[index % colors.length],
+                  }}
+                />
+
+                <span className="category-legend-name">
+                  {categoryEmoji(item.name, categories)} {item.name}
+                </span>
+
+                <strong>{money(item.amount)}</strong>
+
+                <span className="category-percent">
+                  {Math.round((item.amount / total) * 100)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </article>
+  );
+}
