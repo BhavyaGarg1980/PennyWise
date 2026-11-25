@@ -303,3 +303,75 @@ function CategoryDonutChart({ transactions, categories }) {
     </article>
   );
 }
+
+function MonthlyBarChart({ data }) {
+  const maxValue = Math.max(
+    ...data.flatMap((item) => [item.income, item.expense]),
+    1
+  );
+
+  return (
+    <article className="panel monthly-bar-panel">
+      <div className="panel-header">
+        <div>
+          <h3>Monthly comparison</h3>
+          <p>Income versus expenses</p>
+        </div>
+        <span className="chart-period-label">MONTHLY</span>
+      </div>
+
+      <div className="chart-legend">
+        <span>
+          <i className="legend-dot pink-dot" />
+          Income
+        </span>
+        <span>
+          <i className="legend-dot blue-dot" />
+          Expenses
+        </span>
+      </div>
+
+      <div className="monthly-bar-chart">
+        <div className="bar-y-axis">
+          {[100, 75, 50, 25, 0].map((value) => (
+            <span key={value}>{value}%</span>
+          ))}
+        </div>
+
+        <div className="bar-chart-content">
+          <div className="bar-grid-lines">
+            {[0, 1, 2, 3, 4].map((line) => (
+              <span key={line} />
+            ))}
+          </div>
+
+          <div className="bar-months">
+            {data.map((item) => (
+              <div className="bar-month-group" key={item.month}>
+                <div className="bar-pair">
+                  <div
+                    className="monthly-bar income-bar"
+                    style={{
+                      height: `${(item.income / maxValue) * 100}%`,
+                    }}
+                    title={`${item.month} income: ${money(item.income)}`}
+                  />
+
+                  <div
+                    className="monthly-bar expense-bar"
+                    style={{
+                      height: `${(item.expense / maxValue) * 100}%`,
+                    }}
+                    title={`${item.month} expenses: ${money(item.expense)}`}
+                  />
+                </div>
+
+                <span className="bar-month-label">{item.month}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
