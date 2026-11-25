@@ -750,3 +750,5 @@ function BudgetList({ transactions, categories, onSaveBudget }) {
     </div>
   );
 }
+
+export default App;
