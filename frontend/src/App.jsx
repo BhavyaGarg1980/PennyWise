@@ -446,3 +446,307 @@ function TransactionList({
     </div>
   );
 }
+
+function BudgetList({ transactions, categories, onSaveBudget }) {
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [budgetAmount, setBudgetAmount] = useState("");
+  const [editingId, setEditingId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
+
+  // Automatically use the current month.
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(
+    now.getMonth() + 1
+  ).padStart(2, "0")}`;
+
+  const colorClasses = ["pink", "blue", "purple", "green"];
+
+  // Only count expenses from the current month.
+  const monthlyTransactions = transactions.filter((item) => {
+    if (item.type !== "expense" || !item.date) {
+      return false;
+    }
+
+    return String(item.date).slice(0, 7) === currentMonth;
+  });
+
+  // Display categories that have a budget limit.
+  const budgets = categories
+    .filter((category) => Number(category.budgetLimitCents) > 0)
+    .map((category) => {
+      const categoryId = String(category._id || category.id);
+
+      const spent = monthlyTransactions
+        .filter((item) => {
+          return (
+            String(item.categoryId) === categoryId ||
+            item.category === category.name
+          );
+        })
+        .reduce(
+          (sum, item) => sum + Number(item.amount || 0),
+          0
+        );
+
+      const limit = Number(category.budgetLimitCents) / 100;
+      const percent = limit > 0
+        ? Math.round((spent / limit) * 100)
+        : 0;
+
+      return {
+        ...category,
+        spent,
+        limit,
+        percent,
+      };
+    });
+
+  // Open the form for creating a new budget.
+  function startNewBudget() {
+    setEditingId("");
+    setSelectedCategory("");
+    setBudgetAmount("");
+    setError("");
+    setShowBudgetForm(true);
+  }
+
+  // Open the form to edit an existing budget.
+  function startEditing(category) {
+    setEditingId(String(category._id || category.id));
+    setSelectedCategory(String(category._id || category.id));
+    setBudgetAmount(String(Number(category.budgetLimitCents) / 100));
+    setError("");
+    setShowBudgetForm(true);
+  }
+
+  // Close the form and reset its fields.
+  function cancelBudgetForm() {
+    setShowBudgetForm(false);
+    setSelectedCategory("");
+    setBudgetAmount("");
+    setEditingId("");
+    setError("");
+  }
+
+  // Save a new budget or update an existing one.
+  async function handleSave(event) {
+    event.preventDefault();
+
+    const amount = Number(budgetAmount);
+
+    if (!selectedCategory) {
+      setError("Please select a category.");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Enter a budget amount greater than zero.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      await onSaveBudget(selectedCategory, amount);
+
+      cancelBudgetForm();
+    } catch (err) {
+      setError(err.message || "Unable to save the budget.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="budget-list">
+      {/* Set Budget button */}
+      <div className="budget-controls">
+        <button
+          type="button"
+          onClick={startNewBudget}
+        >
+          + Set Budget
+        </button>
+      </div>
+
+      {/* Budget creation and editing form */}
+      {showBudgetForm && (
+        <form
+          className="budget-form"
+          onSubmit={handleSave}
+        >
+          <label>
+            Select Category
+
+            <select
+              value={selectedCategory}
+              onChange={(event) => {
+                const categoryId = event.target.value;
+                setSelectedCategory(categoryId);
+
+                const category = categories.find(
+                  (item) =>
+                    String(item._id || item.id) === categoryId
+                );
+
+                if (
+                  category &&
+                  Number(category.budgetLimitCents) > 0
+                ) {
+                  setBudgetAmount(
+                    String(
+                      Number(category.budgetLimitCents) / 100
+                    )
+                  );
+
+                  setEditingId(categoryId);
+                } else {
+                  setBudgetAmount("");
+                  setEditingId("");
+                }
+
+                setError("");
+              }}
+              required
+            >
+              <option value="">Choose a category</option>
+
+              {categories.map((category) => (
+                <option
+                  key={category._id || category.id}
+                  value={String(category._id || category.id)}
+                >
+                  {category.icon || "📌"} {category.name}
+                  {Number(category.budgetLimitCents) > 0
+                    ? " (Budget set)"
+                    : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Monthly Budget (₹)
+
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="Enter budget amount"
+              value={budgetAmount}
+              onChange={(event) =>
+                setBudgetAmount(event.target.value)
+              }
+              required
+            />
+          </label>
+
+          {error && (
+            <p className="budget-warning" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="budget-form-actions">
+            <button
+              type="submit"
+              disabled={saving}
+            >
+              {saving
+                ? "Saving..."
+                : editingId
+                ? "Update Budget"
+                : "Save Budget"}
+            </button>
+
+            <button
+              type="button"
+              onClick={cancelBudgetForm}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Empty state */}
+      {budgets.length === 0 && (
+        <p>
+          No budgets set yet. Select "+ Set Budget" to create
+          your first category budget.
+        </p>
+      )}
+
+      {/* Budget cards and progress bars */}
+      {budgets.map((budget, index) => {
+        const percent = budget.percent;
+        const color = colorClasses[index % colorClasses.length];
+
+        return (
+          <article
+            className="budget-item"
+            key={budget._id || budget.id}
+          >
+            <div className="budget-heading">
+              <span className={`budget-icon ${color}`}>
+                {budget.icon || "📌"}
+              </span>
+
+              <div className="budget-name">
+                <strong>{budget.name}</strong>
+
+                <span>
+                  {money(budget.spent)} of {money(budget.limit)}
+                </span>
+              </div>
+
+              <strong className="budget-percent">
+                {percent}%
+              </strong>
+
+              <button
+                type="button"
+                onClick={() => startEditing(budget)}
+              >
+                Edit
+              </button>
+            </div>
+
+            <div
+              className="progress-track"
+              role="progressbar"
+              aria-label={`${budget.name} budget`}
+              aria-valuenow={Math.min(percent, 100)}
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div
+                className={`progress-fill ${color}`}
+                style={{
+                  width: `${Math.min(percent, 100)}%`,
+                }}
+              />
+            </div>
+
+            {percent >= 80 && percent <= 100 && (
+              <p className="budget-warning">
+                ⚠️ You've used {percent}% of this month's budget.
+              </p>
+            )}
+
+            {percent > 100 && (
+              <p className="budget-warning">
+                ⚠️ Over budget by{" "}
+                {money(budget.spent - budget.limit)}.
+              </p>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
