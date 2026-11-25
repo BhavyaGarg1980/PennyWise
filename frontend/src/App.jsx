@@ -751,4 +751,1148 @@ function BudgetList({ transactions, categories, onSaveBudget }) {
   );
 }
 
+function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+
+
+  const [categories, setCategories] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+
+  const monthlyData = useMemo(() => {
+  const now = new Date();
+  const result = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const monthDate = new Date(
+      now.getFullYear(),
+      now.getMonth() - i,
+      1
+    );
+
+    let income = 0;
+    let expense = 0;
+
+    transactions.forEach((transaction) => {
+      if (!transaction.date) return;
+
+      const dateString = String(transaction.date).slice(0, 10);
+      const transactionDate = new Date(`${dateString}T00:00:00`);
+
+      if (Number.isNaN(transactionDate.getTime())) return;
+
+      if (
+        transactionDate.getFullYear() === monthDate.getFullYear() &&
+        transactionDate.getMonth() === monthDate.getMonth()
+      ) {
+        const amount = Number(transaction.amount) || 0;
+
+        if (transaction.type === "income") {
+          income += amount;
+        } else if (transaction.type === "expense") {
+          expense += amount;
+        }
+      }
+    });
+
+    result.push({
+      month: monthDate.toLocaleDateString("en-US", {
+        month: "short",
+      }),
+      income,
+      expense,
+    });
+  }
+
+  return result;
+}, [transactions]);
+
+  const [activePage, setActivePage] = useState("Overview");
+  const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [period, setPeriod] = useState("This month");
+  const [toast, setToast] = useState("");
+
+  const [form, setForm] = useState({
+    amount: "",
+    categoryId: "",
+    type: "expense",
+    date: new Date().toISOString().slice(0, 10),
+    paymentMode: "UPI",
+    notes: "",
+  });
+
+  function notify(message) {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 3000);
+  }
+
+  async function apiRequest(path, options = {}) {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      credentials: "include",
+      headers: {
+        ...(options.body
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...options.headers,
+      },
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      setUser(null);
+      throw new Error("Your session expired. Please log in again.");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.message || "Something went wrong.");
+    }
+
+    return data;
+  }
+
+  async function saveBudget(categoryId, budgetLimit) {
+  const updatedCategory = await apiRequest(
+    `/categories/${categoryId}/budget`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ budgetLimit }),
+    }
+  );
+
+  setCategories((previous) =>
+    previous.map((category) =>
+      category._id === updatedCategory._id
+        ? updatedCategory
+        : category
+    )
+  );
+}
+
+  function normalizeTransaction(item) {
+    const category =
+      item.categoryId && typeof item.categoryId === "object"
+        ? item.categoryId
+        : null;
+
+    return {
+      id: item._id,
+      categoryId: category?._id || item.categoryId,
+      category: category?.name || "Other",
+      categoryIcon: category?.icon || "📌",
+      categoryColor: category?.color || "#64748b",
+      date: item.date
+        ? new Date(item.date).toISOString().slice(0, 10)
+        : "",
+      amount: Number(item.amountCents || 0) / 100,
+      type: item.type,
+      paymentMode: item.paymentMode || "Other",
+      notes: item.note || "",
+      isRecurring: Boolean(item.isRecurring),
+    };
+  }
+
+  // Check the existing login session.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkSession() {
+      try {
+        const response = await fetch(`${API_URL}/auth/me`, {
+          credentials: "include",
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!cancelled) {
+          setUser(response.ok ? data.user || null : null);
+        }
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setAuthLoading(false);
+      }
+    }
+
+    checkSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fetch the logged-in user's categories and transactions.
+  useEffect(() => {
+    if (!user) {
+      setCategories([]);
+      setTransactions([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadData() {
+      setDataLoading(true);
+
+      try {
+        const [categoryData, transactionData] = await Promise.all([
+          apiRequest("/categories"),
+          apiRequest("/transactions?limit=50&page=1"),
+        ]);
+
+        if (cancelled) return;
+
+        const loadedCategories = Array.isArray(categoryData)
+          ? categoryData
+          : [];
+
+        setCategories(loadedCategories);
+
+        setTransactions(
+          Array.isArray(transactionData.items)
+            ? transactionData.items.map(normalizeTransaction)
+            : []
+        );
+
+        setForm((current) => ({
+          ...current,
+          categoryId:
+            current.categoryId ||
+            loadedCategories.find(
+              (item) =>
+                item.name === "Food & Dining" ||
+                item.name === "Other"
+            )?._id ||
+            loadedCategories[0]?._id ||
+            "",
+        }));
+      } catch (error) {
+        if (!cancelled) notify(error.message);
+      } finally {
+        if (!cancelled) setDataLoading(false);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const totals = useMemo(() => {
+    const income = transactions
+      .filter((item) => item.type === "income")
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const expense = transactions
+      .filter((item) => item.type === "expense")
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    return {
+  income,
+  expense,
+  balance: income - expense,
+  savings: income
+    ? Math.round(((income - expense) / income) * 1000) / 10
+    : 0,
+};
+  }, [transactions]);
+
+  const filteredTransactions = useMemo(() => {
+    const query = search.toLowerCase().trim();
+
+    if (!query) return transactions;
+
+    return transactions.filter((item) =>
+      [
+        item.category,
+        item.paymentMode,
+        item.notes,
+        item.type,
+        item.date,
+      ].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      )
+    );
+  }, [transactions, search]);
+
+  const recentTransactions = transactions.slice(0, 5);
+
+  // Save transactions to MongoDB.
+  async function addTransaction(event) {
+    event.preventDefault();
+
+    const amount = Number(form.amount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      notify("Please enter a valid amount.");
+      return;
+    }
+
+    if (!form.date || !form.categoryId) {
+      notify("Please select a date and category.");
+      return;
+    }
+
+    try {
+      const saved = await apiRequest("/transactions", {
+        method: "POST",
+        body: JSON.stringify({
+          amount,
+          type: form.type,
+          categoryId: form.categoryId,
+          date: form.date,
+          paymentMode: form.paymentMode,
+          note: form.notes.trim(),
+        }),
+      });
+
+      setTransactions((current) => [
+        normalizeTransaction(saved),
+        ...current,
+      ]);
+
+      setForm({
+        amount: "",
+        categoryId:
+          categories.find(
+            (item) =>
+              item.name === "Food & Dining" ||
+              item.name === "Other"
+          )?._id ||
+          categories[0]?._id ||
+          "",
+        type: "expense",
+        date: new Date().toISOString().slice(0, 10),
+        paymentMode: "UPI",
+        notes: "",
+      });
+
+      setShowModal(false);
+      setActivePage("Overview");
+      notify("Transaction saved successfully!");
+    } catch (error) {
+      notify(error.message);
+    }
+  }
+
+  // Delete transactions from MongoDB.
+  async function deleteTransaction(id) {
+    try {
+      await apiRequest(`/transactions/${id}`, {
+        method: "DELETE",
+      });
+
+      setTransactions((current) =>
+        current.filter((item) => item.id !== id)
+      );
+
+      notify("Transaction deleted successfully.");
+    } catch (error) {
+      notify(error.message);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Clear the frontend session even if the request fails.
+    }
+
+    setUser(null);
+    setCategories([]);
+    setTransactions([]);
+    setShowModal(false);
+    setActivePage("Overview");
+  }
+
+  // Download the currently loaded transactions as CSV.
+  function exportTransactions() {
+    const rows = [
+      [
+        "Category",
+        "Type",
+        "Amount (INR)",
+        "Date",
+        "Payment Mode",
+        "Notes",
+      ],
+      ...filteredTransactions.map((item) => [
+        item.category,
+        item.type,
+        item.amount.toFixed(2),
+        item.date,
+        item.paymentMode,
+        item.notes,
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) =>
+        row
+          .map(
+            (value) =>
+              `"${String(value ?? "").replaceAll('"', '""')}"`
+          )
+          .join(",")
+      )
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "pennywise-transactions.csv";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    notify("CSV downloaded.");
+  }
+
+  if (authLoading) {
+    return (
+      <div className="app-loading">
+        <p>Loading PennyWise...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <button
+          type="button"
+          className="brand"
+          onClick={() => setActivePage("Overview")}
+        >
+          <span className="brand-icon">₹</span>
+          <span>
+            <strong>PennyWise</strong>
+            <small>PERSONAL FINANCE</small>
+          </span>
+        </button>
+
+        <div className="sidebar-label">WORKSPACE</div>
+
+        <nav className="nav-list" aria-label="Main navigation">
+          {navigation.map((item) => (
+            <button
+              type="button"
+              key={item.label}
+              className={`nav-item ${
+                activePage === item.label ? "active" : ""
+              }`}
+              onClick={() => setActivePage(item.label)}
+            >
+              <Icon>{item.icon}</Icon>
+              <span>{item.label}</span>
+              {activePage === item.label && (
+                <span className="nav-dot" />
+              )}
+            </button>
+          ))}
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="sidebar-tip">
+            <span className="tip-sparkle">✧</span>
+            <strong>Small steps add up.</strong>
+            <p>
+              Every mindful money decision brings you closer to your
+              goals.
+            </p>
+          </div>
+
+          <div className="profile">
+            <div className="avatar">
+              {(user.name || user.email || "U")[0].toUpperCase()}
+            </div>
+
+            <div className="profile-info">
+              <strong>{user.name || "My Account"}</strong>
+              <span>{user.email || "Personal account"}</span>
+            </div>
+
+            <button
+              type="button"
+              className="profile-menu"
+              onClick={handleLogout}
+              title="Log out"
+              aria-label="Log out"
+            >
+              ↪
+            </button>
+          </div>
+
+          <div className="preview-label">CONNECTED · MONGODB</div>
+        </div>
+
+        <button
+  type="button"
+  onClick={() => setShowChangePassword(true)}
+  style={{
+    width: "100%",
+    padding: "12px 16px",
+    marginTop: "12px",
+    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "12px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(124, 58, 237, 0.25)",
+    transition: "all 0.2s ease",
+  }}
+>
+  🔒 Change Password
+</button>
+      </aside>
+
+      <main className="main-content">
+        <header className="topbar">
+          <div>
+            <div className="eyebrow">YOUR MONEY, IN FOCUS</div>
+            <h1>
+              {activePage === "Overview"
+                ? "Good money habits start here."
+                : activePage}
+            </h1>
+            <p className="page-subtitle">
+              {activePage === "Overview"
+                ? "A clearer picture of your financial life."
+                : "Manage your finances with confidence."}
+            </p>
+          </div>
+
+          <div className="topbar-actions">
+            <label className="search-box">
+              <Icon>⌕</Icon>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search transactions"
+                aria-label="Search transactions"
+              />
+
+              {search && (
+                <button
+                  type="button"
+                  className="clear-search"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </label>
+
+            <button
+              type="button"
+              className="icon-button notification-button"
+              aria-label="Notifications"
+              onClick={() => notify("You're all caught up!")}
+            >
+              ♧
+              <span className="notification-dot" />
+            </button>
+
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setShowModal(true)}
+            >
+              <span>＋</span> Add transaction
+            </button>
+          </div>
+        </header>
+
+        {dataLoading && (
+          <div className="loading-message">
+            Loading your transactions...
+          </div>
+        )}
+
+        {activePage === "Overview" && (
+          <>
+            <section className="hero-banner">
+              <div>
+                <span className="hero-tag">
+                  ✧ &nbsp; YOUR MONTH AT A GLANCE
+                </span>
+                <h2>Progress over perfection.</h2>
+                <p>
+                  Here's how your money is moving. Every small step
+                  counts.
+                </p>
+              </div>
+              <div className="hero-symbol" aria-hidden="true">
+                ₹
+              </div>
+              <div className="hero-orb" />
+            </section>
+
+            <section className="stats-grid">
+              <article className="stat-card">
+                <div className="stat-top">
+                  <span className="stat-icon pink">₹</span>
+                  
+                </div>
+                <span className="stat-label">Total balance</span>
+                <strong className="stat-value">
+                  {money(totals.balance)}
+                </strong>
+                <span className="stat-note">
+                  Income minus expenses
+                </span>
+              </article>
+
+              <article className="stat-card">
+                <div className="stat-top">
+                  <span className="stat-icon green">↗</span>
+                  
+                </div>
+                <span className="stat-label">Total income</span>
+                <strong className="stat-value">
+                  {money(totals.income)}
+                </strong>
+                <span className="stat-note">Money coming in</span>
+              </article>
+
+              <article className="stat-card">
+                <div className="stat-top">
+                  <span className="stat-icon orange">↘</span>
+                  <Donut
+  percent={
+    totals.income
+      ? Math.min(
+          100,
+          Math.round(
+            (totals.expense / totals.income) * 1000
+          ) / 10
+        )
+      : 0
+  }
+  color="#ffb86b"
+  label="Expense indicator"
+/>
+                </div>
+                <span className="stat-label">Total expenses</span>
+                <strong className="stat-value">
+                  {money(totals.expense)}
+                </strong>
+                <span className="stat-note">Money going out</span>
+              </article>
+
+              <article className="stat-card">
+                <div className="stat-top">
+                  <span className="stat-icon blue">✧</span>
+                  <div className="savings-number">
+                    {totals.savings}%
+                  </div>
+                </div>
+                <span className="stat-label">Savings rate</span>
+                <strong className="stat-value">
+  {totals.savings.toFixed(1)}% of income retained
+</strong>
+                <span className="stat-note">Of your income</span>
+              </article>
+            </section>
+
+            <section className="dashboard-grid">
+              <article className="panel chart-panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Income vs. expenses</h3>
+                    <p>Your monthly cash flow</p>
+                  </div>
+                  <select
+                    className="period-select"
+                    value={period}
+                    onChange={(event) => setPeriod(event.target.value)}
+                    aria-label="Chart period"
+                  >
+                    <option>This month</option>
+                    <option>Last 7 months</option>
+                  </select>
+                </div>
+
+                <div className="chart-legend">
+                  <span>
+                    <i className="legend-dot pink-dot" />
+                    Income
+                  </span>
+                  <span>
+                    <i className="legend-dot blue-dot" />
+                    Expenses
+                  </span>
+                </div>
+
+                <AreaChart data={monthlyData} />
+              </article>
+
+              <article className="panel transactions-panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Recent transactions</h3>
+                    <p>Your latest money moves</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setActivePage("Transactions")}
+                  >
+                    View all →
+                  </button>
+                </div>
+
+                <TransactionList
+                  transactions={recentTransactions}
+                  categories={categories}
+                  onDelete={deleteTransaction}
+                />
+              </article>
+
+              <article className="panel budget-panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Budget overview</h3>
+                    <p>Keep your spending on track</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setActivePage("Budgets")}
+                  >
+                    View budgets →
+                  </button>
+                </div>
+
+                <BudgetList
+  transactions={transactions}
+  categories={categories}
+  onSaveBudget={saveBudget}
+/>
+              </article>
+
+              <article className="panel card-panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Your money card</h3>
+                    <p>A snapshot of your finances</p>
+                  </div>
+                  <span className="card-menu">•••</span>
+                </div>
+
+                <div className="bank-card">
+                  <div className="card-decoration decoration-one" />
+                  <div className="card-decoration decoration-two" />
+
+                  <div className="bank-card-top">
+                    <span className="mini-card-icon">◈</span>
+                    <span>PENNYWISE</span>
+                  </div>
+
+                  <span className="card-balance-label">
+                    Available balance
+                  </span>
+                  <strong>{money(totals.balance)}</strong>
+
+                  <div className="bank-card-bottom">
+                    <span>•••• &nbsp; •••• &nbsp; •••• &nbsp; 2376</span>
+                    <span className="card-circles">
+                      <i />
+                      <i />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="card-footnote">
+                  <span className="online-dot" />
+                  Demo card · Not a real bank account
+                </div>
+              </article>
+
+              <CategoryDonutChart
+                transactions={transactions}
+                categories={categories}
+              />
+
+              <MonthlyBarChart data={monthlyData} />
+            </section>
+
+            <footer className="footer">
+              <span>✧ Made for mindful money habits.</span>
+              <span>PennyWise · Personal finance, simplified.</span>
+            </footer>
+          </>
+        )}
+
+        {activePage === "Transactions" && (
+          <section className="panel page-panel">
+            <div className="panel-header page-panel-header">
+              <div>
+                <h2>All transactions</h2>
+                <p>Your income and expenses in one place.</p>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={exportTransactions}
+              >
+                ↓ Export CSV
+              </button>
+            </div>
+
+            <TransactionList
+              transactions={filteredTransactions}
+              categories={categories}
+              onDelete={deleteTransaction}
+              showAll
+            />
+          </section>
+        )}
+
+        {activePage === "Budgets" && (
+  <section className="panel page-panel">
+    <div className="panel-header page-panel-header">
+      <div>
+        <h2>Your monthly budgets</h2>
+        <p>Track spending against your category limits.</p>
+      </div>
+    </div>
+
+    <BudgetList
+      transactions={transactions}
+      categories={categories}
+      onSaveBudget={saveBudget}
+    />
+  </section>
+)}
+
+        {activePage === "Reports & insights" && (
+          <section className="reports-grid">
+            <article className="panel report-summary">
+              <span className="stat-icon green">↗</span>
+              <span className="stat-label">Income</span>
+              <strong className="stat-value">
+                {money(totals.income)}
+              </strong>
+              <p>Total recorded income.</p>
+            </article>
+
+            <article className="panel report-summary">
+              <span className="stat-icon orange">↘</span>
+              <span className="stat-label">Expenses</span>
+              <strong className="stat-value">
+                {money(totals.expense)}
+              </strong>
+              <p>Total recorded expenses.</p>
+            </article>
+
+            <article className="panel report-summary">
+              <span className="stat-icon purple">✧</span>
+              <span className="stat-label">Net balance</span>
+              <strong className="stat-value">
+                {money(totals.balance)}
+              </strong>
+              <p>Income minus expenses.</p>
+            </article>
+
+            <article className="panel chart-panel full-report">
+              <div className="panel-header">
+                <div>
+                  <h3>Income vs. expenses</h3>
+                  <p>Monthly trend chart</p>
+                </div>
+              </div>
+
+              <div className="chart-legend">
+                <span>
+                  <i className="legend-dot pink-dot" />
+                  Income
+                </span>
+                <span>
+                  <i className="legend-dot blue-dot" />
+                  Expenses
+                </span>
+              </div>
+
+              <AreaChart data={monthlyData} />
+            </article>
+
+            <CategoryDonutChart
+              transactions={transactions}
+              categories={categories}
+            />
+
+            <MonthlyBarChart data={monthlyData} />
+
+            <div className="panel page-panel">
+              <div className="panel-header">
+                <div>
+                  <h3>Export your report</h3>
+                  <p>Download your transactions as a CSV file.</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={exportTransactions}
+              >
+                ↓ Export CSV
+              </button>
+            </div>
+          </section>
+        )}
+      </main>
+
+      {showModal && (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowModal(false);
+            }
+          }}
+        >
+          <section
+            className="transaction-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow">YOUR MONEY, YOUR WAY</span>
+                <h2 id="modal-title">Add a transaction</h2>
+                <p>Keep track of where your money goes.</p>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowModal(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={addTransaction}>
+              <label className="form-label">Transaction type</label>
+
+              <div className="type-toggle">
+                <button
+                  type="button"
+                  className={
+                    form.type === "expense"
+                      ? "selected expense-selected"
+                      : ""
+                  }
+                  onClick={() => {
+                    const category = categories.find(
+                      (item) => !incomeCategories.includes(item.name)
+                    );
+
+                    setForm((current) => ({
+                      ...current,
+                      type: "expense",
+                      categoryId: category?._id || "",
+                    }));
+                  }}
+                >
+                  ↘ Expense
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    form.type === "income"
+                      ? "selected income-selected"
+                      : ""
+                  }
+                  onClick={() => {
+                    const category = categories.find(
+                      (item) => item.name === "Salary"
+                    );
+
+                    setForm((current) => ({
+                      ...current,
+                      type: "income",
+                      categoryId: category?._id || "",
+                    }));
+                  }}
+                >
+                  ↗ Income
+                </button>
+              </div>
+
+              <label className="form-label" htmlFor="transaction-amount">
+                Amount (₹)
+              </label>
+
+              <input
+                id="transaction-amount"
+                className="form-input"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="0.00"
+                value={form.amount}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    amount: event.target.value,
+                  }))
+                }
+                required
+              />
+
+              <label className="form-label" htmlFor="transaction-category">
+                Category
+              </label>
+
+              <select
+                id="transaction-category"
+                className="form-input"
+                value={form.categoryId}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    categoryId: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Select a category
+                </option>
+
+                {categories
+                  .filter((category) =>
+                    form.type === "income"
+                      ? incomeCategories.includes(category.name) ||
+                        category.name === "Other"
+                      : !incomeCategories.includes(category.name)
+                  )
+                  .map((category) => (
+                    <option key={category._id} value={category._id}>
+                      {category.icon || "📌"} {category.name}
+                    </option>
+                  ))}
+              </select>
+
+              <label className="form-label" htmlFor="transaction-date">
+                Date
+              </label>
+
+              <input
+                id="transaction-date"
+                className="form-input"
+                type="date"
+                value={form.date}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    date: event.target.value,
+                  }))
+                }
+                required
+              />
+
+              <label className="form-label" htmlFor="transaction-payment">
+                Payment method
+              </label>
+
+              <select
+                id="transaction-payment"
+                className="form-input"
+                value={form.paymentMode}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    paymentMode: event.target.value,
+                  }))
+                }
+              >
+                {paymentModes.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {mode}
+                  </option>
+                ))}
+              </select>
+
+              <label className="form-label" htmlFor="transaction-notes">
+                Notes <span className="optional-label">(optional)</span>
+              </label>
+
+              <textarea
+                id="transaction-notes"
+                className="form-input form-textarea"
+                placeholder="Add any additional details..."
+                rows="3"
+                maxLength={300}
+                value={form.notes}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    notes: event.target.value,
+                  }))
+                }
+              />
+
+              <button
+                className="primary-button modal-submit"
+                type="submit"
+                disabled={dataLoading}
+              >
+                Save transaction <span>→</span>
+              </button>
+
+              <p className="modal-footnote">
+                Your transaction will be saved to your account.
+              </p>
+            </form>
+          </section>
+        </div>
+      )}
+
+            {toast && <div className="toast-message">{toast}</div>}
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <ChangePassword
+          onClose={() => setShowChangePassword(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 export default App;
