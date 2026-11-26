@@ -164,7 +164,9 @@ export default function Login({ onLogin }) {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <div className="auth-logo">P</div>
+        <div className="auth-logo">
+          <img src="/favicon.svg" alt="" aria-hidden="true" />
+        </div>
 
         <h1>Welcome to PennyWise</h1>
 

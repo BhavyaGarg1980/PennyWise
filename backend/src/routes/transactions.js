@@ -4,9 +4,26 @@ import Transaction from '../models/Transaction.js';
 import Category from '../models/Category.js';
 import auth from '../middleware/auth.js';
 import { toCents } from '../utils/money.js';
+<<<<<<< HEAD
 const router = Router();
 router.use(auth);
 
+=======
+import { syncUserBudgetAlerts } from '../controllers/budgetAlertsController.js';
+const router = Router();
+router.use(auth);
+
+// Recompute in-app budget alerts after a transaction changes. Errors here must
+// never break the transaction request itself.
+async function refreshBudgetAlerts(userId) {
+  try {
+    await syncUserBudgetAlerts(userId);
+  } catch (error) {
+    console.error('Budget alert sync failed:', error.message);
+  }
+}
+
+>>>>>>> 0d3d5a2 (Update PennyWise features and improvements)
 router.get('/', async (req, res, next) => {
   try {
     const { from, to, type, category, page = 1, limit = 10 } = req.query;
@@ -39,6 +56,10 @@ router.post('/', async (req, res, next) => {
       nextOccurrence: isRecurring ? new Date(date) : null,
       recurringKey: isRecurring ? new mongoose.Types.ObjectId().toString() : null
     });
+<<<<<<< HEAD
+=======
+    await refreshBudgetAlerts(req.user.id);
+>>>>>>> 0d3d5a2 (Update PennyWise features and improvements)
     res.status(201).json(await transaction.populate('categoryId', 'name icon color'));
   } catch (e) { next(e); }
 });
@@ -50,6 +71,10 @@ router.put('/:id', async (req, res, next) => {
     if (req.body.amount !== undefined) updates.amountCents = toCents(req.body.amount);
     const tx = await Transaction.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, updates, { new: true, runValidators: true }).populate('categoryId', 'name icon color');
     if (!tx) return res.status(404).json({ message: 'Transaction not found' });
+<<<<<<< HEAD
+=======
+    await refreshBudgetAlerts(req.user.id);
+>>>>>>> 0d3d5a2 (Update PennyWise features and improvements)
     res.json(tx);
   } catch (e) { next(e); }
 });
@@ -57,6 +82,10 @@ router.delete('/:id', async (req, res, next) => {
   try {
     const tx = await Transaction.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     if (!tx) return res.status(404).json({ message: 'Transaction not found' });
+<<<<<<< HEAD
+=======
+    await refreshBudgetAlerts(req.user.id);
+>>>>>>> 0d3d5a2 (Update PennyWise features and improvements)
     res.json({ message: 'Transaction deleted' });
   } catch (e) { next(e); }
 });

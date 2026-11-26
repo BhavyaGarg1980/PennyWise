@@ -2,6 +2,10 @@ import "./styles.css";
 import { useEffect, useMemo, useState } from "react";
 import Login from "./Login";
 import ChangePassword from "./ChangePassword";
+import RecurringTransactions from "./components/RecurringTransactions";
+import SavingsGoals from "./components/SavingsGoals";
+import BudgetAlerts from "./components/BudgetAlerts";
+import BillReminders from "./components/BillReminders";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -19,6 +23,10 @@ const navigation = [
   { label: "Overview", icon: "▦" },
   { label: "Transactions", icon: "⇄" },
   { label: "Budgets", icon: "▤" },
+  { label: "Budget Alerts", icon: "⚠" },
+  { label: "Bill Reminders", icon: "⏰" },
+  { label: "Recurring Transactions", icon: "↻" },
+  { label: "Savings Goals", icon: "◎" },
   { label: "Reports & insights", icon: "▥" },
 ];
 
@@ -823,6 +831,8 @@ const [walletForm, setWalletForm] = useState({
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("This month");
   const [toast, setToast] = useState("");
+  // Bumped by the new feature pages to refresh dashboard/transactions data.
+  const [refreshToken, setRefreshToken] = useState(0);
 
   const [form, setForm] = useState({
     amount: "",
@@ -1025,7 +1035,7 @@ async function handleAddWallet(event) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, refreshToken]);
 
   const totals = useMemo(() => {
     const income = transactions
@@ -1228,7 +1238,9 @@ async function handleAddWallet(event) {
           className="brand"
           onClick={() => setActivePage("Overview")}
         >
-          <span className="brand-icon">₹</span>
+          <span className="brand-icon">
+            <img src="/favicon.svg" alt="" aria-hidden="true" />
+          </span>
           <span>
             <strong>PennyWise</strong>
             <small>PERSONAL FINANCE</small>
@@ -1462,6 +1474,7 @@ async function handleAddWallet(event) {
               </article>
             </section>
 
+<<<<<<< HEAD
 
 <section className="panel wallets-panel">
   <div className="panel-header">
@@ -1579,6 +1592,18 @@ async function handleAddWallet(event) {
     )}
   </div>
 </section>
+=======
+            <BudgetAlerts
+              variant="compact"
+              transactions={transactions}
+              onOpenAlerts={() => setActivePage("Budget Alerts")}
+            />
+
+            <BillReminders
+              variant="compact"
+              onOpenBills={() => setActivePage("Bill Reminders")}
+            />
+>>>>>>> 0d3d5a2 (Update PennyWise features and improvements)
 
             <section className="dashboard-grid">
               <article className="panel chart-panel">
@@ -1752,6 +1777,38 @@ async function handleAddWallet(event) {
   </section>
 )}
 
+        {activePage === "Budget Alerts" && (
+          <section className="panel page-panel">
+            <div className="panel-header page-panel-header">
+              <div>
+                <h2>Smart budget alerts</h2>
+                <p>
+                  Automatic warnings at 75%, 90% and 100% of every category
+                  budget.
+                </p>
+              </div>
+            </div>
+
+            <BudgetAlerts variant="full" transactions={transactions} />
+          </section>
+        )}
+
+        {activePage === "Bill Reminders" && (
+          <section className="panel page-panel">
+            <div className="panel-header page-panel-header">
+              <div>
+                <h2>Bill reminders</h2>
+                <p>
+                  Track recurring bills, see what's due soon and never miss a
+                  payment.
+                </p>
+              </div>
+            </div>
+
+            <BillReminders variant="full" />
+          </section>
+        )}
+
         {activePage === "Reports & insights" && (
           <section className="reports-grid">
             <article className="panel report-summary">
@@ -1827,6 +1884,22 @@ async function handleAddWallet(event) {
               </button>
             </div>
           </section>
+        )}
+
+        {activePage === "Recurring Transactions" && (
+          <RecurringTransactions
+            notify={notify}
+            onSessionExpired={() => setUser(null)}
+            onDataChanged={() => setRefreshToken((value) => value + 1)}
+          />
+        )}
+
+        {activePage === "Savings Goals" && (
+          <SavingsGoals
+            notify={notify}
+            onSessionExpired={() => setUser(null)}
+            onDataChanged={() => setRefreshToken((value) => value + 1)}
+          />
         )}
       </main>
 

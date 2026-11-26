@@ -16,9 +16,21 @@ const transactionSchema = new mongoose.Schema({
   default: null,
   index: true
 },
-  nextOccurrence: { type: Date, default: null }
+  nextOccurrence: { type: Date, default: null },
+
+  // --- Recurring Transactions feature (additive, optional fields) ---
+  // Links a generated transaction to its RecurringTransaction source and
+  // records which occurrence it represents. Left undefined for normal
+  // transactions, so the partial index below only covers generated ones.
+  recurringSourceId: { type: mongoose.Schema.Types.ObjectId, ref: 'RecurringTransaction', default: undefined },
+  recurringOccurrenceDate: { type: Date, default: undefined }
 }, { timestamps: true });
 transactionSchema.index({ userId: 1, date: -1 });
 transactionSchema.index({ userId: 1, type: 1, date: -1 });
 transactionSchema.index({ recurringKey: 1, date: 1 }, { sparse: true });
+// Database-level idempotency: at most ONE transaction per (source, occurrence).
+transactionSchema.index(
+  { recurringSourceId: 1, recurringOccurrenceDate: 1 },
+  { unique: true, partialFilterExpression: { recurringSourceId: { $exists: true } } }
+);
 export default mongoose.model('Transaction', transactionSchema);

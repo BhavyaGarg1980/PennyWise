@@ -1,6 +1,4 @@
 import 'dotenv/config';
-import dotenv from "dotenv";
-dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -12,8 +10,19 @@ import categoryRoutes from './routes/categories.js';
 import transactionRoutes from './routes/transactions.js';
 import budgetRoutes from './routes/budgets.js';
 import reportRoutes from './routes/reports.js';
+// --- New feature routes (Recurring Transactions & Savings Goals) ---
+import recurringTransactionRoutes from './routes/recurringTransactions.js';
+import savingsGoalRoutes from './routes/savingsGoals.js';
+// --- Smart Budget Alerts ---
+import budgetAlertRoutes from './routes/budgetAlerts.js';
+// --- Bill Reminders ---
+import billRoutes from './routes/bills.js';
 
 import { runScheduledTasks } from './jobs/tasks.js';
+import {
+  processDueRecurringTransactions,
+  startRecurringScheduler
+} from './jobs/recurringTransactionJob.js';
 
 const app = express();
 
@@ -55,6 +64,13 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/wallets', walletRoutes);
+// --- New feature routes ---
+app.use('/api/recurring-transactions', recurringTransactionRoutes);
+app.use('/api/savings-goals', savingsGoalRoutes);
+// --- Smart Budget Alerts ---
+app.use('/api/budget-alerts', budgetAlertRoutes);
+// --- Bill Reminders ---
+app.use('/api/bills', billRoutes);
 
 // Scheduled jobs endpoint.
 app.post('/api/jobs/run', async (req, res) => {
@@ -70,9 +86,13 @@ app.post('/api/jobs/run', async (req, res) => {
   try {
     const result = await runScheduledTasks();
 
+    // Reuse the existing job runner for recurring transactions too. This is
+    // idempotent, so running it alongside the in-process scheduler is safe.
+    const recurringTransactions = await processDueRecurringTransactions();
+
     return res.json({
       message: 'Scheduled tasks completed',
-      result,
+      result: { ...result, recurringTransactions },
     });
   } catch (error) {
     console.error('Scheduled task failed:', error);
@@ -108,6 +128,9 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected successfully.');
+
+    // Kick off the recurring transaction scheduler (catches up missed dues).
+    startRecurringScheduler();
 
     app.listen(port, () => {
       console.log(`API listening on port ${port}`);

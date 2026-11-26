@@ -177,11 +177,15 @@ select {
   height: 43px;
   place-items: center;
   border-radius: 14px;
-  background: linear-gradient(135deg, #f184b2, #8c79ff);
-  color: white;
-  font-size: 25px;
-  font-weight: 700;
-  box-shadow: 0 5px 22px rgba(173, 113, 241, 0.22);
+  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 5px 22px rgba(48, 176, 110, 0.24);
+}
+
+.brand-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .brand strong {
@@ -2235,10 +2239,15 @@ select {
   place-items: center;
   margin-bottom: 22px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #c184ed, #f36c9c);
-  color: white;
-  font-size: 27px;
-  font-weight: 800;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 8px 26px rgba(48, 176, 110, 0.26);
+}
+
+.auth-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .auth-card h1 {

@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import Wallet from '../models/Wallet.js';
 import WalletTransfer from '../models/WalletTransfer.js';
 import Transaction from '../models/Transaction.js';
+import SavingsContribution from '../models/SavingsContribution.js';
 
 import auth from '../middleware/auth.js';
 import { toCents } from '../utils/money.js';
@@ -89,6 +90,25 @@ router.get('/', async (req, res, next) => {
         ])
       ]);
 
+    // --- Savings Goals integration (additive) ---
+    // Money moved into a goal (deposit) leaves the wallet; money moved out
+    // of a goal (withdrawal) returns to the wallet. These are kept in the
+    // separate SavingsContribution ledger so they never appear in reports.
+    const savingsTotals = await SavingsContribution.aggregate([
+      {
+        $match: {
+          userId,
+          walletId: { $in: walletIds }
+        }
+      },
+      {
+        $group: {
+          _id: { walletId: '$walletId', type: '$type' },
+          totalCents: { $sum: '$amountCents' }
+        }
+      }
+    ]);
+
     const totals = new Map();
 
     for (const wallet of wallets) {
@@ -96,7 +116,9 @@ router.get('/', async (req, res, next) => {
         income: 0,
         expense: 0,
         incoming: 0,
-        outgoing: 0
+        outgoing: 0,
+        savingsOut: 0,
+        savingsIn: 0
       });
     }
 
@@ -123,6 +145,14 @@ router.get('/', async (req, res, next) => {
       if (wallet) wallet.outgoing = item.totalCents;
     }
 
+    // --- Savings Goals integration (additive) ---
+    for (const item of savingsTotals) {
+      const wallet = totals.get(String(item._id.walletId));
+      if (!wallet) continue;
+      if (item._id.type === 'deposit') wallet.savingsOut = item.totalCents;
+      if (item._id.type === 'withdrawal') wallet.savingsIn = item.totalCents;
+    }
+
     const result = wallets.map(wallet => {
       const data = totals.get(String(wallet._id));
 
@@ -131,7 +161,9 @@ router.get('/', async (req, res, next) => {
         data.income -
         data.expense +
         data.incoming -
-        data.outgoing;
+        data.outgoing -
+        data.savingsOut +
+        data.savingsIn;
 
       return {
         ...wallet.toObject(),

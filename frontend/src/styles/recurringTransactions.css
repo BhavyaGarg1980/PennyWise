@@ -1,0 +1,330 @@
+/* =========================================================
+   RECURRING TRANSACTIONS — isolated feature styles
+   Namespaced with `.rt-` so it never clashes with existing CSS.
+   Reuses the global PennyWise theme variables from styles.css.
+   ========================================================= */
+
+.rt-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.rt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.rt-toolbar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Summary stats ---------- */
+
+.rt-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+}
+
+.rt-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.rt-stat span {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.rt-stat strong {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.rt-stat small {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* ---------- List ---------- */
+
+.rt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rt-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.rt-item:hover {
+  background: var(--surface-hover);
+}
+
+.rt-item-icon {
+  display: grid;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  font-size: 1.2rem;
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+
+.rt-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.rt-item-main strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rt-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.rt-item-amount {
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rt-item-amount.income {
+  color: var(--green);
+}
+
+.rt-item-amount.expense {
+  color: var(--pink-soft);
+}
+
+/* ---------- Badges ---------- */
+
+.rt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: capitalize;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.rt-badge.active {
+  color: var(--green);
+  background: rgba(112, 216, 162, 0.12);
+  border-color: rgba(112, 216, 162, 0.35);
+}
+
+.rt-badge.paused {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border);
+}
+
+.rt-badge.ended {
+  color: var(--blue);
+  background: rgba(146, 152, 255, 0.12);
+  border-color: rgba(146, 152, 255, 0.35);
+}
+
+.rt-badge.freq {
+  color: var(--purple);
+  background: rgba(187, 135, 238, 0.12);
+  border-color: rgba(187, 135, 238, 0.35);
+}
+
+/* ---------- Actions ---------- */
+
+.rt-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.rt-action {
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.rt-action:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.rt-action.danger:hover {
+  color: #ffdce6;
+  background: rgba(243, 108, 156, 0.24);
+  border-color: rgba(243, 108, 156, 0.5);
+}
+
+/* ---------- Modal ---------- */
+
+.rt-modal {
+  width: min(560px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 30px 32px;
+  background: var(--gradient-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+}
+
+.rt-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  margin-top: 8px;
+}
+
+.rt-form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.rt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rt-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.rt-error {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #ffd6e3;
+  background: rgba(243, 108, 156, 0.16);
+  border: 1px solid rgba(243, 108, 156, 0.4);
+  border-radius: 10px;
+}
+
+/* ---------- History ---------- */
+
+.rt-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.rt-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.rt-history-item small {
+  color: var(--text-muted);
+}
+
+/* ---------- States ---------- */
+
+.rt-loading,
+.rt-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.rt-empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rt-empty strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.rt-skeleton {
+  height: 74px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    100deg,
+    var(--surface) 30%,
+    var(--surface-hover) 50%,
+    var(--surface) 70%
+  );
+  background-size: 220% 100%;
+  animation: rt-shimmer 1.3s ease infinite;
+}
+
+@keyframes rt-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .rt-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rt-item {
+    flex-wrap: wrap;
+  }
+
+  .rt-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

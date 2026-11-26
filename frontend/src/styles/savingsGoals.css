@@ -1,0 +1,320 @@
+/* =========================================================
+   SAVINGS GOALS — isolated feature styles
+   Namespaced with `.sg-` so it never clashes with existing CSS.
+   Reuses the global PennyWise theme variables from styles.css.
+   ========================================================= */
+
+.sg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.sg-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Summary stats ---------- */
+
+.sg-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+}
+
+.sg-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.sg-stat span {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sg-stat strong {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* ---------- Goal grid ---------- */
+
+.sg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.sg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 22px;
+  background: var(--gradient-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.sg-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sg-card-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.sg-card-head p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.sg-status {
+  flex-shrink: 0;
+  padding: 4px 11px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.sg-status.active {
+  color: var(--blue);
+  background: rgba(146, 152, 255, 0.12);
+  border-color: rgba(146, 152, 255, 0.35);
+}
+
+.sg-status.completed {
+  color: var(--green);
+  background: rgba(112, 216, 162, 0.14);
+  border-color: rgba(112, 216, 162, 0.4);
+}
+
+.sg-status.archived {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border);
+}
+
+/* ---------- Progress ---------- */
+
+.sg-progress-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sg-progress-row strong {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.sg-progress-row span {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.sg-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.sg-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gradient-button);
+  transition: width 0.4s ease;
+}
+
+.sg-bar-fill.completed {
+  background: linear-gradient(110deg, #70d8a2, #4fb98a);
+}
+
+.sg-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.sg-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.sg-action {
+  padding: 8px 13px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.sg-action:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.sg-action.primary {
+  color: #fff;
+  background: var(--gradient-button);
+  border-color: transparent;
+}
+
+.sg-action.danger:hover {
+  color: #ffdce6;
+  background: rgba(243, 108, 156, 0.24);
+  border-color: rgba(243, 108, 156, 0.5);
+}
+
+/* ---------- Activity feed ---------- */
+
+.sg-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sg-activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.sg-activity-item small {
+  color: var(--text-muted);
+}
+
+.sg-activity-amount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sg-activity-amount.deposit {
+  color: var(--green);
+}
+
+.sg-activity-amount.withdrawal {
+  color: var(--pink-soft);
+}
+
+/* ---------- Modal ---------- */
+
+.sg-modal {
+  width: min(520px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 30px 32px;
+  background: var(--gradient-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+}
+
+.sg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.sg-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sg-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.sg-type-toggle button {
+  padding: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+}
+
+.sg-type-toggle button.selected {
+  color: #fff;
+  background: var(--gradient-button);
+}
+
+.sg-error {
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #ffd6e3;
+  background: rgba(243, 108, 156, 0.16);
+  border: 1px solid rgba(243, 108, 156, 0.4);
+  border-radius: 10px;
+}
+
+/* ---------- States ---------- */
+
+.sg-loading,
+.sg-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.sg-empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sg-empty strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+@media (max-width: 720px) {
+  .sg-grid {
+    grid-template-columns: 1fr;
+  }
+}
