@@ -1474,8 +1474,6 @@ async function handleAddWallet(event) {
               </article>
             </section>
 
-<<<<<<< HEAD
-
 <section className="panel wallets-panel">
   <div className="panel-header">
     <div>
@@ -1592,7 +1590,6 @@ async function handleAddWallet(event) {
     )}
   </div>
 </section>
-=======
             <BudgetAlerts
               variant="compact"
               transactions={transactions}
@@ -1603,7 +1600,6 @@ async function handleAddWallet(event) {
               variant="compact"
               onOpenBills={() => setActivePage("Bill Reminders")}
             />
->>>>>>> 0d3d5a2 (Update PennyWise features and improvements)
 
             <section className="dashboard-grid">
               <article className="panel chart-panel">
