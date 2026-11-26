@@ -2662,3 +2662,65 @@ select {
   outline: 2px solid #ec65b9;
   outline-offset: 3px;
 }
+
+
+
+/* PennyWise wallet theme fixes */
+
+.wallets-panel {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.wallet-card {
+  background: linear-gradient(
+    135deg,
+    #252536,
+    #30283d
+  );
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.wallet-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--purple);
+}
+
+.wallet-card h4 {
+  color: var(--text);
+}
+
+.wallet-card strong {
+  color: var(--green);
+}
+
+.wallet-type,
+.wallet-balance-label,
+.wallet-empty {
+  color: var(--text-secondary);
+}
+
+.wallet-form {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.wallet-form h4,
+.wallet-form label {
+  color: var(--text);
+}
+
+.wallet-form input,
+.wallet-form select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.wallet-form input::placeholder {
+  color: var(--text-muted);
+}

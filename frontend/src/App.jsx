@@ -838,19 +838,34 @@ const [walletForm, setWalletForm] = useState({
     window.setTimeout(() => setToast(""), 3000);
   }
 
-  async function apiRequest(path, options = {}) {
-    const response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      credentials: "include",
-      headers: {
-        ...(options.body
-          ? { "Content-Type": "application/json" }
-          : {}),
-        ...options.headers,
-      },
-    });
+  
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    credentials: "include",
+    headers: {
+      ...(options.body
+        ? { "Content-Type": "application/json" }
+        : {}),
+      ...options.headers,
+    },
+  });
 
-    async function handleAddWallet(event) {
+  const data = await response.json().catch(() => ({}));
+
+  if (response.status === 401) {
+    setUser(null);
+    throw new Error("Your session expired. Please log in again.");
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || "Something went wrong.");
+  }
+
+  return data;
+}
+
+async function handleAddWallet(event) {
   event.preventDefault();
 
   try {
@@ -878,19 +893,6 @@ const [walletForm, setWalletForm] = useState({
   }
 }
 
-    const data = await response.json().catch(() => ({}));
-
-    if (response.status === 401) {
-      setUser(null);
-      throw new Error("Your session expired. Please log in again.");
-    }
-
-    if (!response.ok) {
-      throw new Error(data.message || "Something went wrong.");
-    }
-
-    return data;
-  }
 
   async function saveBudget(categoryId, budgetLimit) {
   const updatedCategory = await apiRequest(
@@ -1459,6 +1461,124 @@ const [walletForm, setWalletForm] = useState({
                 <span className="stat-note">Of your income</span>
               </article>
             </section>
+
+
+<section className="panel wallets-panel">
+  <div className="panel-header">
+    <div>
+      <h3>My Wallets</h3>
+      <p>Manage all your money in one place.</p>
+    </div>
+
+    <button
+      type="button"
+      className="primary-button"
+      onClick={() => setShowWalletModal(!showWalletModal)}
+    >
+      + Add Wallet
+    </button>
+  </div>
+
+  {showWalletModal && (
+    <form className="wallet-form" onSubmit={handleAddWallet}>
+      <h4>Add a new wallet</h4>
+
+      <label className="form-label">Wallet name</label>
+      <input
+        type="text"
+        placeholder="e.g. HDFC Bank"
+        value={walletForm.name}
+        onChange={(event) =>
+          setWalletForm({
+            ...walletForm,
+            name: event.target.value
+          })
+        }
+        required
+      />
+
+      <label className="form-label">Wallet type</label>
+      <select
+        value={walletForm.type}
+        onChange={(event) =>
+          setWalletForm({
+            ...walletForm,
+            type: event.target.value
+          })
+        }
+      >
+        <option value="bank">Bank Account</option>
+        <option value="cash">Cash</option>
+        <option value="digital">Digital Wallet</option>
+      </select>
+
+      <label className="form-label">Opening balance (₹)</label>
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="Enter opening balance"
+        value={walletForm.openingBalance}
+        onChange={(event) =>
+          setWalletForm({
+            ...walletForm,
+            openingBalance: event.target.value
+          })
+        }
+      />
+
+      <div className="wallet-form-actions">
+        <button type="submit" className="primary-button">
+          Save Wallet
+        </button>
+
+        <button
+          type="button"
+          className="text-button"
+          onClick={() => setShowWalletModal(false)}
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  )}
+
+  <div className="wallet-grid">
+    {wallets.length === 0 ? (
+      <p className="wallet-empty">
+        No wallets added yet. Click Add Wallet to get started.
+      </p>
+    ) : (
+      wallets.map((wallet) => (
+        <article className="wallet-card" key={wallet._id}>
+          <div className="wallet-card-top">
+            <span className="wallet-icon">
+              {wallet.type === "bank"
+                ? "🏦"
+                : wallet.type === "cash"
+                ? "💵"
+                : "📱"}
+            </span>
+
+            <span className="wallet-type">
+              {wallet.type}
+            </span>
+          </div>
+
+          <h4>{wallet.name}</h4>
+
+          <span className="wallet-balance-label">
+            Available balance
+          </span>
+
+          <strong>
+            {money(Number(wallet.balanceCents || 0) / 100)}
+          </strong>
+        </article>
+      ))
+    )}
+  </div>
+</section>
 
             <section className="dashboard-grid">
               <article className="panel chart-panel">
