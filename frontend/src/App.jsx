@@ -761,6 +761,15 @@ function App() {
   const [categories, setCategories] = useState([]);
   const [transactions, setTransactions] = useState([]);
 
+  const [wallets, setWallets] = useState([]);
+const [showWalletModal, setShowWalletModal] = useState(false);
+
+const [walletForm, setWalletForm] = useState({
+  name: "",
+  type: "bank",
+  openingBalance: ""
+});
+
   const monthlyData = useMemo(() => {
   const now = new Date();
   const result = [];
@@ -840,6 +849,34 @@ function App() {
         ...options.headers,
       },
     });
+
+    async function handleAddWallet(event) {
+  event.preventDefault();
+
+  try {
+    const newWallet = await apiRequest("/wallets", {
+      method: "POST",
+      body: JSON.stringify({
+        name: walletForm.name,
+        type: walletForm.type,
+        openingBalance: Number(walletForm.openingBalance || 0)
+      })
+    });
+
+    setWallets((previous) => [...previous, newWallet]);
+
+    setWalletForm({
+      name: "",
+      type: "bank",
+      openingBalance: ""
+    });
+
+    setShowWalletModal(false);
+    notify("Wallet added successfully!");
+  } catch (error) {
+    notify(error.message);
+  }
+}
 
     const data = await response.json().catch(() => ({}));
 
@@ -942,10 +979,11 @@ function App() {
       setDataLoading(true);
 
       try {
-        const [categoryData, transactionData] = await Promise.all([
-          apiRequest("/categories"),
-          apiRequest("/transactions?limit=50&page=1"),
-        ]);
+        const [categoryData, transactionData, walletData] = await Promise.all([
+  apiRequest("/categories"),
+  apiRequest("/transactions?limit=50&page=1"),
+  apiRequest("/wallets"),
+]);
 
         if (cancelled) return;
 
@@ -954,7 +992,7 @@ function App() {
           : [];
 
         setCategories(loadedCategories);
-
+        setWallets(Array.isArray(walletData) ? walletData : []);
         setTransactions(
           Array.isArray(transactionData.items)
             ? transactionData.items.map(normalizeTransaction)
