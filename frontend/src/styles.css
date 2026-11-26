@@ -2670,55 +2670,96 @@ select {
 .wallets-panel {
   background: var(--surface);
   color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
 }
 
 .wallet-card {
   background: linear-gradient(
     135deg,
-    #252536,
-    #30283d
+    #252536 0%,
+    #2c243b 55%,
+    #30283d 100%
   );
   color: var(--text);
   border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
   box-shadow: var(--shadow-card);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .wallet-card:hover {
   transform: translateY(-3px);
   border-color: var(--purple);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
 .wallet-card h4 {
+  margin: 0 0 6px;
   color: var(--text);
+  font-weight: 600;
 }
 
 .wallet-card strong {
   color: var(--green);
+  font-variant-numeric: tabular-nums;
 }
 
 .wallet-type,
 .wallet-balance-label,
 .wallet-empty {
   color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.wallet-empty {
+  text-align: center;
+  padding: 24px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
 }
 
 .wallet-form {
   background: var(--surface-raised);
   color: var(--text);
-  border-color: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 14px;
 }
 
 .wallet-form h4,
 .wallet-form label {
+  display: block;
   color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 6px;
 }
 
 .wallet-form input,
 .wallet-form select {
+  width: 100%;
+  box-sizing: border-box;
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.925rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wallet-form input:focus,
+.wallet-form select:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--purple) 22%, transparent);
 }
 
 .wallet-form input::placeholder {
